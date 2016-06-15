@@ -145,7 +145,6 @@ MCMC.triplet<-function(triplet, ell_0, ETA_BAR_PRIOR, MinMax.Prior){
   ## End of MCMC loop
   ##########################################
   
-  
   alpha_mean = alpha_pt025  = alpha_pt975 = matrix(nrow = nRep, ncol = t.T)
   A_mean = A_pt025 = A_pt975 = matrix(nrow = nRep, ncol = t.T)
   for(i in 1:nRep){
@@ -166,39 +165,52 @@ MCMC.triplet<-function(triplet, ell_0, ETA_BAR_PRIOR, MinMax.Prior){
     beta = scale
     return ( (beta^alpha/gamma(alpha) )*x^(-alpha - 1)*exp(-beta/x) )
   }
+  
   for(l in 1:L){
-  df = data.frame(rr, sigma2 = SIGMA2_POST[,l], density = dInvgamma(rr, shape = r_0, scale = s_0[l]) )
-  pdf(paste(Triplet_fig_dir,"Sigma2_",triplet,"_",l,".pdf", sep=""))
-  g<-ggplot(df, aes(x=sigma2)) + 
-    geom_density(size = 2) + 
-    xlab("") + 
-    geom_line(aes(rr, density), color = "blue", size = 2)+
-    theme(axis.text=element_text(size=20, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
-  print(g)
-  dev.off()
+    df = data.frame(rr, sigma2 = SIGMA2_POST[,l], density = dInvgamma(rr, shape = r_0, scale = s_0[l] ) )
+    pdf(paste(Triplet_fig_dir,"Sigma2_",triplet, "_", l,".pdf", sep=""))
+    g<-ggplot(df, aes(x=sigma2)) + 
+      geom_density(size = 2) + 
+      xlab("") + 
+      geom_line(aes(rr, density), color = "blue", size = 2)+
+      theme(axis.text=element_text(size=20, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
+    print(g)
+    dev.off()
   }
   
   eb_post = 1/(1+exp(-ETA_BAR_POST))
   eb_prior = 1/(1+exp(-ETA_BAR_PRIOR))
   
+  require(gridExtra)
+  
+  pdf(paste(Triplet_fig_dir,"Post_Predictive_",triplet,".pdf", sep=""), width = 16)
   df = data.frame(eta_bar = eb_post, prior = eb_prior)
-  pdf(paste(Triplet_fig_dir,"Eta_Bar_",triplet,".pdf", sep=""))
-  g<-ggplot(df, aes(x=eta_bar)) + 
+  g1<-ggplot(df, aes(x=eta_bar)) + 
     geom_density(size = 2) + 
-    xlab("") + 
+    xlab("Eta bar") + 
     #xlim(0,1)+
     geom_density( aes(prior), color = "blue", size = 2)+
-    theme(axis.text=element_text(size=20, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
-  print(g)
+    theme(axis.text=element_text(size=10, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
+  
+  colnames(Ell_Post) = as.character(ell)
+  df = stack(as.data.frame(Ell_Post))
+  names(df) = c("Probability", "lengthScale")
+  df$lengthScale <- factor(df$lengthScale,levels = ell,ordered = TRUE)
+  g2<-ggplot(df, aes(lengthScale, Probability)) + geom_boxplot()+ xlab("Ell") + 
+    theme(axis.text=element_text(size=10, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
+  
+  df = data.frame(MinMax = MinMax.Pred, Prior = MinMax.Prior)
+  g3<-ggplot(df, aes(x=MinMax)) + 
+    geom_density(size = 2) + 
+    xlab("Max - Min") + 
+    geom_density( aes(Prior), color = "blue", size = 2)+
+    xlim(0,1)+
+    theme(axis.text=element_text(size=10, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
+
+  grid.arrange(g1, g2, g3, ncol=3, widths = c(3,3,3))
   dev.off()
   
-  df = data.frame(replication = 1:nRep, Z.mean = apply(ZETA_POST,2,mean) )
-  pdf(paste(Triplet_fig_dir,"Zeta_Post_",triplet,".pdf",sep="") )
-  g<-ggplot(df, aes(x = replication) )+
-    geom_point(aes(x=replication,y=Z.mean), size=4)+
-    theme(axis.text=element_text(size=20, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
-  print(g)
-  dev.off()
+  
   
   lw.1 = qgamma(.025, shape = r_A, rate = s_A)
   up.1 = qgamma(.975, shape = r_A, rate = s_A)
@@ -247,34 +259,36 @@ MCMC.triplet<-function(triplet, ell_0, ETA_BAR_PRIOR, MinMax.Prior){
   print(p1)   
   dev.off()
   
-  colnames(Ell_Post) = as.character(ell)
-  df = stack(as.data.frame(Ell_Post))
-  names(df) = c("Probability", "lengthScale")
-  df$lengthScale <- factor(df$lengthScale,levels = ell,ordered = TRUE)
-  pdf(paste(Triplet_fig_dir,"Post_Predictive_Ell_",triplet,".pdf",sep="") )
-  g<-ggplot(df, aes(lengthScale, Probability)) + geom_boxplot()+
-    theme(axis.text=element_text(size=20, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
-  print(g)
-  dev.off()
-  
-  df = data.frame(MinMax = MinMax.Pred, Prior = MinMax.Prior)
-  pdf(paste(Triplet_fig_dir,"MinMax_Pred_",triplet,".pdf", sep=""))
-  g<-ggplot(df, aes(x=MinMax)) + 
-    geom_density(size = 2) + 
-    xlab("") + 
-    geom_density( aes(Prior), color = "blue", size = 2)+
-    xlim(0,1)+
-    theme(axis.text=element_text(size=20, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
-  print(g)
-  dev.off()
+  lw.1 = qgamma(.025, shape = r_A, rate = s_A)
+  up.1 = qgamma(.975, shape = r_A, rate = s_A)
+  lw.2 = qgamma(.025, shape = r_B, rate = s_B)
+  up.2 = qgamma(.975, shape = r_B, rate = s_B)
   
   for(i in 1:nRep){
+
+    pdf(paste(Triplet_fig_dir,"Triplet_",triplet,"_",i,".pdf", sep=""), width = 16)
+    
+    df = data.frame(Time = 1:t.T, m.1, up.1, lw.1, m.2, up.2, lw.2)
+    df$X = X[i,]
+    g1 <- ggplot(df, aes(Time, m.1))+
+      geom_point(color = "blue")+
+      geom_line(data=df, color = "blue")+
+      geom_ribbon(data=df,aes(ymin=lw.1,ymax=up.1),alpha=0.3, color = "blue", fill = "blue")+ 
+      geom_line(aes(Time, m.2), color = "red" )+
+      geom_point(aes(Time, m.2), color = "red" )+
+      geom_ribbon(data=df, aes(ymin=lw.2,ymax=up.2), color = "red", alpha = .3, fill = "red")+
+      geom_point(aes(Time,X), color = "black", size = 3)+
+      geom_line(aes(Time,X), color = "black", size = 1)+
+      ylab("Counts")+
+      ylim(0,15)+
+      theme(axis.text=element_text(size=10, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
+    #print(g1)
     
     df = data.frame(Time = 1:t.T, mean = alpha_mean[i,], CI.025 = alpha_pt025[i,], CI.975 = alpha_pt975[i,], sample1 = ALPHA[[i]][1,], sample2 = ALPHA[[i]][50,], sample3 = ALPHA[[i]][100,])
     l2 = sqrt(sum( (alpha_mean[i,] - mean(alpha_mean[i,]) )^2 ) )
     l2 = round(l2,2)
-    pdf(paste(Triplet_fig_dir,"Alpha_triplet_",triplet,"_",i,".pdf", sep=""))
-    g <- ggplot(df, aes(Time, mean))+
+    #pdf(paste(Triplet_fig_dir,"Alpha_triplet_",triplet,"_",i,".pdf", sep=""))
+    g2 <- ggplot(df, aes(Time, mean))+
       geom_point(color = "black")+
       geom_line(data=df, color = "black")+
       geom_line(data=df,aes(Time,sample1), color = "gray70")+
@@ -283,24 +297,27 @@ MCMC.triplet<-function(triplet, ell_0, ETA_BAR_PRIOR, MinMax.Prior){
       geom_ribbon(data=df,aes(ymin=CI.025,ymax=CI.975),alpha=0.1, color = "black", fill = "black")+ 
       ylim(0,1)+
       xlab("Time")+
-      annotate( "text", x=5, y = .9, size = 8, label = paste("L2 = " ,l2, sep=""))+
-      theme(axis.text=element_text(size=20, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
-    print(g)
-    dev.off()
+      annotate( "text", x=5, y = .9, size = 5, label = paste("L2 = " ,l2, sep=""))+
+      theme(axis.text=element_text(size=10, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
+    #print(g2)
+    #dev.off()
     
     df = data.frame(MinMax = MinMax[,i], Prior = MinMax.Prior)
-    pdf(paste(Triplet_fig_dir,"MinMax_",triplet,"_",i,".pdf", sep=""))
-    g<-ggplot(df, aes(x=MinMax)) + 
+    #pdf(paste(Triplet_fig_dir,"MinMax_",triplet,"_",i,".pdf", sep=""))
+    g3<-ggplot(df, aes(x=MinMax)) + 
       geom_density(size=2) + 
-      xlab("") + 
+      xlab("Max - Min") + 
       geom_density( aes(Prior), color = "blue", size = 2)+
       xlim(0,1) + 
-      theme(axis.text=element_text(size=20, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
-    print(g)
+      theme(axis.text=element_text(size=10, color="black"),axis.title=element_text(size=24,face="bold"), legend.text=element_text(size=20))
+    #print(g3)
+    grid.arrange(g1, g2, g3, ncol=3, widths = c(3,3,3))
     dev.off()
     
   }
   
   save(file = paste(Triplet_dir,"triplet_",triplet,".RData", sep=""), alpha_mean, alpha_pt025, alpha_pt975, A_mean, A_pt025, A_pt975, ALPHA_BAR_POST, ETA_BAR_POST, Median.Min.Max)
 }
+
+
 
